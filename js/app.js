@@ -1,5 +1,5 @@
 // Funil Gamificado Vue.js 3 - Trilha SENAI Dev
-const { createApp, ref, computed, onMounted, watch } = Vue;
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
 createApp({
   setup() {
@@ -19,6 +19,7 @@ createApp({
     const selectedOption = ref(null);
     const validationState = ref(null); // null | 'correct' | 'wrong'
     const showTip = ref(false);
+    const showDetails = ref(false); // Alternância de detalhes no mobile
     
     // Modais e utilitários
     const showBadgesModal = ref(false);
@@ -87,7 +88,7 @@ createApp({
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => {
         toastMessage.value = '';
-      }, 4000);
+      }, 3500);
     };
 
     // Confetes
@@ -103,6 +104,16 @@ createApp({
           confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
         }
       }
+    };
+
+    // Rolar o botão da etapa ativa para o centro no mobile
+    const scrollActiveStepIntoView = () => {
+      nextTick(() => {
+        const stepEl = document.getElementById(`step-node-${currentLessonIndex.value}`);
+        if (stepEl) {
+          stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+      });
     };
 
     // Computed Properties
@@ -182,6 +193,7 @@ createApp({
           console.error('Erro ao ler progresso salvo:', e);
         }
       }
+      scrollActiveStepIntoView();
     };
 
     const resetAllProgress = () => {
@@ -195,20 +207,36 @@ createApp({
       showTip.value = false;
       showResetModal.value = false;
       showToast('Progresso reiniciado com sucesso!');
+      scrollActiveStepIntoView();
     };
 
     // Navegação pelas etapas do funil
     const goToLesson = (idx) => {
       if (idx > unlockedMaxIndex.value) {
         playErrorSound();
-        showToast(`🔒 A etapa ${idx + 1} está bloqueada. Conclua a anterior primeiro!`);
+        showToast(`🔒 Aula ${idx + 1} bloqueada. Responda o desafio da anterior!`);
         return;
       }
       currentLessonIndex.value = idx;
       selectedOption.value = null;
       validationState.value = null;
       showTip.value = false;
+      scrollActiveStepIntoView();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const prevLessonNav = () => {
+      if (currentLessonIndex.value > 0) {
+        goToLesson(currentLessonIndex.value - 1);
+      }
+    };
+
+    const nextLessonNav = () => {
+      if (currentLessonIndex.value < unlockedMaxIndex.value && currentLessonIndex.value < lessons.value.length - 1) {
+        goToLesson(currentLessonIndex.value + 1);
+      } else if (currentLessonIndex.value + 1 > unlockedMaxIndex.value) {
+        showToast(`🔒 Conclua a pergunta da aula atual para avançar!`);
+      }
     };
 
     const nextLesson = () => {
@@ -264,6 +292,7 @@ createApp({
         }
 
         saveProgress();
+        scrollActiveStepIntoView();
       } else {
         validationState.value = 'wrong';
         playErrorSound();
@@ -292,7 +321,6 @@ createApp({
         loadProgress();
       } catch (err) {
         console.warn('Falha no fetch direto de database.json:', err);
-        // Fallback para window.FALLBACK_DATABASE se disponível
         if (window.FALLBACK_DATABASE) {
           course.value = window.FALLBACK_DATABASE.course;
           ranks.value = window.FALLBACK_DATABASE.ranks;
@@ -320,6 +348,7 @@ createApp({
       selectedOption,
       validationState,
       showTip,
+      showDetails,
       showBadgesModal,
       showCertModal,
       showResetModal,
@@ -334,6 +363,8 @@ createApp({
       xpToNextRankPercentage,
       unlockedBadges,
       goToLesson,
+      prevLessonNav,
+      nextLessonNav,
       nextLesson,
       selectOption,
       validateAnswer,
