@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Funil Gamificado Vue.js 3 | SENAI Dev</title>
+  <meta name="description" content="Trilha de aprendizado e funil gamificado do curso de Vue.js 3 para a formação Dev do SENAI.">
+  
+  <!-- Fontes Google Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Estilos customizados -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Fallback de dados para execução local/offline -->
+  <script src="data/database.fallback.js"></script>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <!-- Header Principal -->
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand-wrapper">
+          <div class="brand-badge">SENAI DEV</div>
+          <div class="brand-info">
+            <h1>
+              Trilha Gamificada
+              <span class="vue-tag">Vue.js 3</span>
+            </h1>
+            <p>{{ course.institution || 'SENAI - Desenvolvimento de Sistemas' }}</p>
+          </div>
+        </div>
+
+        <!-- Gamificação no Header -->
+        <div class="header-gamification" v-if="!loading">
+          <!-- Patente / Rank -->
+          <div class="rank-pill" :title="`Nível atual: ${currentRank.title}`">
+            <span>{{ currentRank.badge }}</span>
+            <span>{{ currentRank.title }}</span>
+          </div>
+
+          <!-- Barra de XP -->
+          <div class="xp-progress-compact">
+            <div class="xp-labels">
+              <span>XP Total</span>
+              <span class="xp-value">{{ totalEarnedXp }} / {{ course.totalXp }} XP</span>
+            </div>
+            <div class="progress-bar-bg" :title="`Progresso do nível atual: ${xpToNextRankPercentage}%`">
+              <div class="progress-bar-fill" :style="{ width: xpToNextRankPercentage + '%' }"></div>
+            </div>
+          </div>
+
+          <!-- Ações Rápidas -->
+          <div class="header-actions">
+            <button class="btn-icon" @click="toggleSound" :title="soundEnabled ? 'Desativar som' : 'Ativar som'">
+              {{ soundEnabled ? '🔊' : '🔇' }}
+            </button>
+            <button class="btn-icon" @click="showBadgesModal = true" :title="`Ver Conquistas (${unlockedBadges.length}/${lessons.length})`">
+              🏆
+            </button>
+            <button class="btn-icon" @click="showResetModal = true" title="Reiniciar Trilha">
+              🔄
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Barra do Funil Gamificado (Stepper Interativo 01 a 21) -->
+    <nav class="funnel-nav-section" v-if="!loading && lessons.length">
+      <div class="funnel-container">
+        <div class="funnel-header-row">
+          <div class="funnel-title-group">
+            <h2>Funil de Aprendizado Sequencial</h2>
+            <span class="funnel-stats">
+              Aula {{ currentLessonIndex + 1 }} de {{ lessons.length }} • {{ progressPercentage }}% Concluído
+            </span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-faint);">
+            🎯 Responda o desafio para liberar a próxima etapa
+          </div>
+        </div>
+
+        <!-- Rolagem horizontal dos passos do funil -->
+        <div class="funnel-scroll-wrapper">
+          <div class="funnel-steps">
+            <template v-for="(lesson, idx) in lessons" :key="lesson.id">
+              <button 
+                class="step-item"
+                :class="{
+                  'is-active': idx === currentLessonIndex,
+                  'is-completed': completedLessons.includes(lesson.id),
+                  'is-unlocked': idx <= unlockedMaxIndex,
+                  'is-locked': idx > unlockedMaxIndex
+                }"
+                @click="goToLesson(idx)"
+                :title="idx > unlockedMaxIndex ? `Etapa ${idx + 1} bloqueada` : `${lesson.title}`"
+              >
+                <div class="step-node">
+                  <span v-if="completedLessons.includes(lesson.id)">✓</span>
+                  <span v-else-if="idx > unlockedMaxIndex">🔒</span>
+                  <span v-else>{{ idx + 1 < 10 ? '0' + (idx + 1) : idx + 1 }}</span>
+                </div>
+                <span class="step-label">Aula {{ idx + 1 < 10 ? '0' + (idx + 1) : idx + 1 }}</span>
+              </button>
+
+              <!-- Conector entre os nós -->
+              <div 
+                v-if="idx < lessons.length - 1" 
+                class="step-connector"
+                :class="{ 'is-filled': completedLessons.includes(lesson.id) }"
+              ></div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Área Principal de Aprendizado -->
+    <main class="main-workspace" v-if="!loading && currentLesson">
+      <div class="stage-grid">
+        
+        <!-- Coluna Esquerda: Player do YouTube e Detalhes da Aula -->
+        <section class="video-column">
+          <!-- Player 16:9 responsivo do YouTube -->
+          <div class="video-player-wrapper">
+            <iframe 
+              :src="`https://www.youtube-nocookie.com/embed/${currentLesson.videoId}?rel=0&modestbranding=1`" 
+              title="Vídeo da Aula - Treinamento Vue.js 3" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+              allowfullscreen
+            ></iframe>
+          </div>
+
+          <!-- Metadados da Aula -->
+          <article class="video-meta-card">
+            <div class="meta-header-tags">
+              <span class="category-tag">{{ currentLesson.category }}</span>
+              <span class="duration-tag">⏱️ {{ currentLesson.duration }}</span>
+              <span class="stage-badge-pill">
+                Recompensa: {{ currentLesson.badge.icon }} {{ currentLesson.badge.name }}
+              </span>
+            </div>
+
+            <h2>{{ currentLesson.title }}</h2>
+            <p class="lesson-summary">{{ currentLesson.summary }}</p>
+
+            <div class="competency-box">
+              <h4>🎯 Competência SENAI Desenvolvida:</h4>
+              <p>{{ currentLesson.competency }}</p>
+            </div>
+
+            <div class="source-credits">
+              <span>Instrutor: <strong>Ralf Lima</strong> (Treinamento Vue.js 3)</span>
+              <a 
+                :href="`https://www.youtube.com/watch?v=${currentLesson.videoId}`" 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                Abrir no YouTube ↗
+              </a>
+            </div>
+          </article>
+        </section>
+
+        <!-- Coluna Direita: Desafio Gamificado de Fixação (Funil) -->
+        <section class="quiz-column">
+          <div class="quiz-card">
+            <!-- Cabeçalho do Quiz -->
+            <div class="quiz-card-header">
+              <div class="quiz-header-badge">
+                <span>🎯 Desafio de Fixação</span>
+              </div>
+              <div class="xp-reward-badge">
+                <span>⚡ +{{ currentLesson.xp }} XP</span>
+              </div>
+            </div>
+
+            <!-- Alerta de Status da Etapa -->
+            <div 
+              class="quiz-status-alert"
+              :class="isCurrentLessonCompleted ? 'alert-completed' : 'alert-pending'"
+            >
+              <span v-if="isCurrentLessonCompleted">
+                ✅ Você já respondeu este desafio com sucesso! Pode avançar ou praticar novamente.
+              </span>
+              <span v-else>
+                🔒 Responda corretamente para liberar o próximo vídeo da trilha.
+              </span>
+            </div>
+
+            <!-- Enunciado da Pergunta -->
+            <p class="question-text">
+              {{ currentLesson.question.text }}
+            </p>
+
+            <!-- Alternativas Interativas -->
+            <div class="options-list">
+              <button
+                v-for="(option, oIdx) in currentLesson.question.options"
+                :key="oIdx"
+                class="option-btn"
+                :class="{
+                  'is-selected': selectedOption === oIdx && validationState === null,
+                  'is-correct': validationState === 'correct' && oIdx === currentLesson.question.correctIndex,
+                  'is-wrong': validationState === 'wrong' && oIdx === selectedOption
+                }"
+                @click="selectOption(oIdx)"
+                :disabled="validationState === 'correct'"
+              >
+                <div class="option-letter">
+                  {{ ['A', 'B', 'C', 'D'][oIdx] }}
+                </div>
+                <span>{{ option }}</span>
+              </button>
+            </div>
+
+            <!-- Feedback de Resposta Correta -->
+            <div v-if="validationState === 'correct'" class="feedback-box feedback-success">
+              <h4>🎉 Excelente, resposta correta!</h4>
+              <p>{{ currentLesson.question.explanation }}</p>
+            </div>
+
+            <!-- Feedback de Resposta Errada -->
+            <div v-if="validationState === 'wrong'" class="feedback-box feedback-error">
+              <h4>❌ Resposta incorreta!</h4>
+              <p>Reveja o trecho do vídeo ou leia a dica pedagógica abaixo antes de tentar novamente.</p>
+            </div>
+
+            <!-- Dica Pedagógica Expansível -->
+            <div v-if="showTip" class="tip-box">
+              <span>💡</span>
+              <p><strong>Dica:</strong> {{ currentLesson.question.tip }}</p>
+            </div>
+
+            <!-- Barra de Ações do Quiz -->
+            <div class="quiz-actions">
+              <!-- Botão de Validar Resposta -->
+              <button 
+                v-if="validationState !== 'correct'" 
+                class="btn-primary"
+                @click="validateAnswer"
+                :disabled="selectedOption === null"
+              >
+                Validar Resposta
+              </button>
+
+              <!-- Botão de Avançar quando acertar -->
+              <button 
+                v-if="validationState === 'correct'" 
+                class="btn-success"
+                @click="nextLesson"
+              >
+                <span v-if="currentLessonIndex < lessons.length - 1">
+                  Avançar para Aula {{ currentLessonIndex + 2 }} ➔
+                </span>
+                <span v-else>
+                  Ver Certificado de Conclusão 🎓
+                </span>
+              </button>
+
+              <!-- Botão de Tentar Novamente se errar -->
+              <button 
+                v-if="validationState === 'wrong'" 
+                class="btn-secondary"
+                @click="tryAgain"
+              >
+                Tentar Novamente
+              </button>
+
+              <!-- Botão de Dica -->
+              <button 
+                class="btn-tip"
+                @click="showTip = !showTip"
+                :title="showTip ? 'Ocultar dica' : 'Ver dica pedagógica'"
+              >
+                💡 {{ showTip ? 'Ocultar Dica' : 'Precisa de Ajuda?' }}
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- Modal de Badges e Conquistas -->
+    <div class="modal-overlay" v-if="showBadgesModal" @click.self="showBadgesModal = false">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>🏆 Galeria de Conquistas ({{ unlockedBadges.length }}/{{ lessons.length }})</h3>
+          <button class="btn-close-modal" @click="showBadgesModal = false">✕</button>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">
+          Complete os desafios das aulas para desbloquear todas as medalhas da formação SENAI Dev:
+        </p>
+        <div class="badges-grid">
+          <div 
+            v-for="lesson in lessons" 
+            :key="lesson.id"
+            class="badge-card"
+            :class="completedLessons.includes(lesson.id) ? 'is-unlocked' : 'is-locked'"
+          >
+            <div class="badge-icon">{{ lesson.badge.icon }}</div>
+            <div class="badge-title">{{ lesson.badge.name }}</div>
+            <div class="badge-desc">Aula {{ lesson.index }}: {{ lesson.badge.description }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Certificado / Graduação (Conclusão das 21 Aulas) -->
+    <div class="modal-overlay" v-if="showCertModal" @click.self="showCertModal = false">
+      <div class="modal-card cert-card">
+        <button class="btn-close-modal" style="position: absolute; right: 20px; top: 20px;" @click="showCertModal = false">✕</button>
+        <div class="cert-stamp">🏆</div>
+        <h2>PARABÉNS, DESENVOLVEDOR(A)!</h2>
+        <p class="cert-subtitle">
+          Você completou com êxito todas as <strong>21 etapas</strong> do Funil Gamificado em Vue.js 3!
+        </p>
+
+        <!-- Estatísticas da Formação -->
+        <div class="cert-meta-grid">
+          <div class="cert-stat">
+            <h5>Aulas Concluídas</h5>
+            <span>21 / 21</span>
+          </div>
+          <div class="cert-stat">
+            <h5>XP Total Obtido</h5>
+            <span style="color: #38bdf8;">{{ totalEarnedXp }} XP</span>
+          </div>
+          <div class="cert-stat">
+            <h5>Patente Final</h5>
+            <span style="color: #fbbf24;">{{ currentRank.badge }} {{ currentRank.title }}</span>
+          </div>
+        </div>
+
+        <div style="margin: 1.5rem 0;">
+          <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+            Nome do Aluno no Certificado:
+          </label>
+          <input 
+            type="text" 
+            v-model="studentName" 
+            style="background: var(--bg-surface); border: 1px solid var(--border-highlight); color: #fff; padding: 0.6rem 1rem; border-radius: var(--radius-md); width: 100%; max-width: 380px; text-align: center; font-size: 1rem; font-family: inherit;"
+          />
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+          <button class="btn-primary" @click="triggerConfetti(true)">
+            🎉 Comemorar Novamente!
+          </button>
+          <button class="btn-secondary" onclick="window.print()">
+            🖨️ Imprimir / Salvar PDF
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmação de Reset -->
+    <div class="modal-overlay" v-if="showResetModal" @click.self="showResetModal = false">
+      <div class="modal-card reset-modal-card">
+        <h3 style="color: #fff; font-size: 1.2rem;">⚠️ Reiniciar Trilha?</h3>
+        <p>
+          Tem certeza de que deseja zerar seu progresso, XP e conquistas desbloqueadas? Esta ação não pode ser desfeita.
+        </p>
+        <div class="reset-modal-actions">
+          <button class="btn-secondary" @click="showResetModal = false">Cancelar</button>
+          <button class="btn-danger" @click="resetAllProgress">Sim, Reiniciar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notificação Toast Flutuante -->
+    <div v-if="toastMessage" class="toast-notification">
+      <span>{{ toastMessage }}</span>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="app-footer">
+      <p>
+        Projeto Educacional • <strong>SENAI Desenvolvimento de Sistemas</strong> • Trilha Vue.js 3 baseada no conteúdo de Ralf Lima.
+      </p>
+    </footer>
+  </div>
+
+  <!-- Script da Aplicação Vue 3 -->
+  <script src="js/app.js"></script>
+</body>
+</html>
