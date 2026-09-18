@@ -9,6 +9,8 @@
 O objetivo deste projeto é transformar a jornada de aprendizado do framework Vue.js em uma **experiência gamificada em funil**:
 - **Avanço Sequencial com Bloqueio Real**: O aluno assiste à aula e só consegue liberar o próximo vídeo após responder corretamente à pergunta técnica de validação.
 - **Banco de Dados em JSON (`data/database.json`)**: Estrutura simples e desacoplada contendo todas as 21 aulas, perguntas de múltipla escolha, explicações didáticas, dicas e conquistas.
+- **Design Mobile-First com Tailwind CSS**: Interface compacta, responsiva e focada na usabilidade em smartphones e desktops.
+- **Barras de Rolagem Estilizadas**: Customização completa eliminando barras nativas cinzas do sistema operacional.
 - **Sistema de Gamificação**:
   - ⚡ **Pontos de Experiência (XP)**: Ganho de XP a cada acerto (+100 XP por aula básica e +150 XP no desafio final).
   - 🎖️ **Patentes / Níveis Dev SENAI**: Evolução de *Dev Iniciante* até *Especialista Vue SENAI*.
@@ -50,26 +52,27 @@ O objetivo deste projeto é transformar a jornada de aprendizado do framework Vu
 ## 🛠️ Tecnologias Utilizadas
 
 - **[Vue.js 3](https://vuejs.org/)** (Composition API, reatividade e renderização declarativa)
-- **HTML5 Semântico** & **CSS3 Moderno** (design minimalista, dark mode e responsivo)
-- **Web Audio API** (sons de vitória, erro e fanfarra sintetizados em tempo real)
-- **Canvas Confetti** (animação de celebração ao atingir conquistas)
-- **JSON nativo** (armazenamento leve e editável da estrutura do curso)
-- **LocalStorage API** (salvamento automático do progresso do aluno)
+- **[Tailwind CSS](https://tailwindcss.com/)** (Design mobile-first utilitário e responsivo)
+- **HTML5 Semântico** & **CSS3 Moderno** (Scrollbars personalizadas e animações)
+- **Web Audio API** (Sons sintetizados em tempo real)
+- **Canvas Confetti** (Efeitos visuais comemorativos)
+- **JSON nativo** (Banco de dados desacoplado)
+- **LocalStorage API** (Salvamento automático do progresso)
 
 ---
 
 ## 📂 Estrutura de Arquivos
 
 ```text
-playlists/
+VueGamificado/
 ├── data/
 │   ├── database.json        # Banco de dados com as 21 aulas e perguntas
 │   └── database.fallback.js # Fallback de execução direta sem servidor HTTP
 ├── css/
-│   └── style.css            # Estilos minimalistas e responsivos (SENAI Dev)
+│   └── style.css            # Tratamento avançado de scrollbars e animações
 ├── js/
 │   └── app.js               # Aplicação reativa Vue 3 e lógica do funil
-├── index.html               # Página principal do sistema
+├── index.html               # Interface única (Mobile-First)
 ├── .gitignore               # Arquivos ignorados pelo Git
 └── README.md                # Documentação completa do projeto
 ```
@@ -78,55 +81,39 @@ playlists/
 
 ## 💻 Como Executar o Projeto
 
-### Opção 1: Via XAMPP (Recomendado)
-1. Coloque a pasta do projeto em seu diretório de projetos do XAMPP:
-   ```text
-   C:\xampp\htdocs\30porti\playlists\ (ou E:\xampp\htdocs\30porti\playlists\)
-   ```
-2. Inicie o módulo **Apache** no painel de controle do XAMPP.
-3. Abra no navegador:
-   ```
-   http://localhost/30porti/playlists/
-   ```
+### Opção 1: Direto no Navegador (Sem Instalação)
+Basta abrir o arquivo `index.html` em qualquer navegador web moderno (Google Chrome, Microsoft Edge, Mozilla Firefox, Safari, etc.). O projeto conta com fallback local integrado.
 
-### Opção 2: Via VS Code Live Server
-1. Abra a pasta no VS Code.
-2. Clique com botão direito em `index.html` e selecione **Open with Live Server**.
+### Opção 2: Via VS Code (Live Server)
+1. Abra a pasta do projeto no VS Code.
+2. Com a extensão **Live Server**, clique com o botão direito sobre o arquivo `index.html` e selecione **Open with Live Server**.
 
-### Opção 3: Direto no Navegador (Offline)
-- Basta dar duplo clique no arquivo `index.html` (o arquivo `data/database.fallback.js` garante a execução sem bloqueio de CORS local).
+### Opção 3: Via Servidor Web Local
+Você pode servir a pasta com qualquer servidor local:
+- **Node.js**:
+  ```bash
+  npx serve .
+  ```
+- **Python**:
+  ```bash
+  python -m http.server 8000
+  ```
+- **Apache / Nginx / XAMPP**:
+  Copie a pasta para o diretório raiz do seu servidor web (ex: pasta `htdocs` ou `www`) e acesse via `http://localhost/sua-pasta/`.
 
 ---
 
-## 📤 Como Subir no GitHub
+## 🌐 Publicação no GitHub Pages
 
-Para publicar o projeto em seu repositório no GitHub, siga os comandos abaixo no terminal dentro da pasta do projeto:
-
-```bash
-# 1. Inicialize o repositório Git
-git init
-
-# 2. Adicione todos os arquivos
-git add .
-
-# 3. Crie o primeiro commit
-git commit -m "feat: funil gamificado de vue.js 3 (aulas 01 a 21) para o curso dev senai"
-
-# 4. Defina a branch principal como main
-git branch -M main
-
-# 5. Adicione o seu repositório remoto do GitHub (substitua com a sua URL)
-git remote add origin https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO.git
-
-# 6. Envie os arquivos para o GitHub
-git push -u origin main
-```
-
-> **Dica**: Você pode ativar o **GitHub Pages** nas configurações do repositório (`Settings > Pages > Branch: main`) para ter o projeto rodando online gratuitamente!
+Para publicar este projeto online gratuitamente:
+1. Acesse seu repositório no GitHub.
+2. Vá em **Settings** > **Pages**.
+3. Na seção **Build and deployment**, selecione a branch `main` e a pasta `/ (root)`.
+4. Clique em **Save**. Em alguns minutos a página estará online!
 
 ---
 
 ## 👨‍🏫 Créditos e Referências
 
-- Conteúdo original das aulas: **[Ralf Lima - Treinamento Vue.js 3](https://www.youtube.com/watch?v=K8zIkkq8VbE&list=PLWXw8Gu52TRL3sY3esdsH2PxYiRdXwfvX)**
+- Conteúdo das aulas: **[Ralf Lima - Treinamento Vue.js 3](https://www.youtube.com/watch?v=K8zIkkq8VbE&list=PLWXw8Gu52TRL3sY3esdsH2PxYiRdXwfvX)**
 - Projeto elaborado para fins didáticos na formação **SENAI Dev**.
